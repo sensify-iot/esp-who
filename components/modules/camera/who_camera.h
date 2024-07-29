@@ -192,7 +192,7 @@
 #define CAMERA_PIN_PCLK CONFIG_CAMERA_PIN_PCLK
 #endif
 
-#define XCLK_FREQ_HZ 15000000
+#define XCLK_FREQ_HZ 20000000
 
 #ifdef __cplusplus
 extern "C"
@@ -235,10 +235,21 @@ extern "C"
      *                     - FRAMESIZE_QSXGA,    // 2560x1920
      * @param fb_count     Number of frame buffers to be allocated. If more than one, then each frame will be acquired (double speed)
      */
-    void register_camera(const pixformat_t pixel_fromat,
+    enum __cam_state_t{
+            STOP=0,
+            RUNNING
+        };
+
+    esp_err_t register_camera(const pixformat_t pixel_fromat,
                          const framesize_t frame_size,
                          const uint8_t fb_count,
                          const QueueHandle_t frame_o);
+
+    enum __cam_state_t getCamState();
+    void cam_setSleep(bool mode);
+
+    // Función para cambiar la resolución de la cámara
+    esp_err_t set_camera_framesize(framesize_t frame_size);
 
 #ifdef __cplusplus
 }

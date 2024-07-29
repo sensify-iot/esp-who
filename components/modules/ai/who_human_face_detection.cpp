@@ -9,7 +9,8 @@
 
 #include "who_ai_utils.hpp"
 
-#define TWO_STAGE_ON 1
+#define TWO_STAGE_ON 0
+#define SCORE_TH_DEFAULT    0.5
 
 static const char *TAG = "human_face_detection";
 
@@ -20,6 +21,9 @@ static QueueHandle_t xQueueResult = NULL;
 
 static bool gEvent = true;
 static bool gReturnFB = true;
+
+face_detected_cb _faceD_callback = nullptr;
+bool is_processing = false;
 
 static void task_process_handler(void *arg)
 {
@@ -33,9 +37,11 @@ static void task_process_handler(void *arg)
     {
         if (gEvent)
         {
+            float score = 0;
             bool is_detected = false;
             if (xQueueReceive(xQueueFrameI, &frame, portMAX_DELAY))
             {
+                is_processing = true;
 #if TWO_STAGE_ON
                 std::list<dl::detect::result_t> &detect_candidates = detector.infer((uint16_t *)frame->buf, {(int)frame->height, (int)frame->width, 3});
                 std::list<dl::detect::result_t> &detect_results = detector2.infer((uint16_t *)frame->buf, {(int)frame->height, (int)frame->width, 3}, detect_candidates);
@@ -48,6 +54,18 @@ static void task_process_handler(void *arg)
                     draw_detection_result((uint16_t *)frame->buf, frame->height, frame->width, detect_results);
                     print_detection_result(detect_results);
                     is_detected = true;
+
+                    for (auto it = detect_results.begin(); it != detect_results.end(); ++it)
+                    {
+                        if(it->score>score) score = it->score;
+                    }
+
+                    printf("Face detected [score: %f] ::: fh = %lub\n", score,(long unsigned)xPortGetFreeHeapSize());
+                    
+                    if(_faceD_callback)
+                    {
+                        _faceD_callback(frame,score);
+                    }
                 }
             }
 
@@ -68,6 +86,8 @@ static void task_process_handler(void *arg)
             {
                 xQueueSend(xQueueResult, &is_detected, portMAX_DELAY);
             }
+
+            is_processing = false; // Termina de procesar el frame
         }
     }
 }
@@ -95,4 +115,14 @@ void register_human_face_detection(const QueueHandle_t frame_i,
     xTaskCreatePinnedToCore(task_process_handler, TAG, 4 * 1024, NULL, 5, NULL, 0);
     if (xQueueEvent)
         xTaskCreatePinnedToCore(task_event_handler, TAG, 4 * 1024, NULL, 5, NULL, 1);
+}
+
+void set_faceD_callback(face_detected_cb cb)
+{
+    _faceD_callback = cb;
+}
+
+bool is_processing_or_frames_left() {
+    // Devuelve true si está procesando un frame o si quedan frames por procesar
+    return (is_processing || (uxQueueMessagesWaiting(xQueueFrameI) > 0));
 }
