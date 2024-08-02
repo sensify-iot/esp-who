@@ -3,6 +3,8 @@
 #include "esp_log.h"
 #include "esp_system.h"
 
+#include <string.h>
+
 static const char *TAG = "who_camera";
 static QueueHandle_t xQueueFrameO = NULL;
 
@@ -134,52 +136,66 @@ esp_err_t register_camera(const pixformat_t pixel_fromat,
         s->set_saturation(s, -2); //lower the saturation
     }
 
-    xQueueFrameO = frame_o;
-    xTaskCreatePinnedToCore(task_process_handler, TAG, 3 * 1024, NULL, 5, NULL, 1);
+    if(frame_o)
+    {
+        ESP_LOGI(TAG,"Starting camera task process...");
+        xQueueFrameO = frame_o;
+        xTaskCreatePinnedToCore(task_process_handler, TAG, 3 * 1024, NULL, 18, NULL, 1);
+    }
+
     return ESP_OK;
 }
 
-esp_err_t set_camera_framesize(framesize_t frame_size) {
+uint8_t* take_Photo(size_t* image_size, int quality)
+{
+    camera_fb_t* fb = NULL;
 
-    // Actualiza el framebuffer
-    esp_camera_deinit();
-
-    camera_config_t config;
-    config.ledc_channel = LEDC_CHANNEL_0;
-    config.ledc_timer = LEDC_TIMER_0;
-    config.pin_d0 = CAMERA_PIN_D0;
-    config.pin_d1 = CAMERA_PIN_D1;
-    config.pin_d2 = CAMERA_PIN_D2;
-    config.pin_d3 = CAMERA_PIN_D3;
-    config.pin_d4 = CAMERA_PIN_D4;
-    config.pin_d5 = CAMERA_PIN_D5;
-    config.pin_d6 = CAMERA_PIN_D6;
-    config.pin_d7 = CAMERA_PIN_D7;
-    config.pin_xclk = CAMERA_PIN_XCLK;
-    config.pin_pclk = CAMERA_PIN_PCLK;
-    config.pin_vsync = CAMERA_PIN_VSYNC;
-    config.pin_href = CAMERA_PIN_HREF;
-    config.pin_sscb_sda = CAMERA_PIN_SIOD;
-    config.pin_sscb_scl = CAMERA_PIN_SIOC;
-    config.pin_pwdn = CAMERA_PIN_PWDN;
-    config.pin_reset = CAMERA_PIN_RESET;
-    config.xclk_freq_hz = 20000000;
-    config.pixel_format = PIXFORMAT_RGB565;
-    config.frame_size = frame_size; // Set the new frame size
-    config.jpeg_quality = 12;
-    config.fb_count = 2;
-    config.fb_location = CAMERA_FB_IN_PSRAM;
-    config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
-
-    // Inicializa la cámara con el nuevo tamaño de frame
-    if (esp_camera_init(&config) != ESP_OK) {
-        ESP_LOGE(TAG, "Error al reinicializar la cámara");
-        return ESP_FAIL;
+    ESP_LOGI(TAG,"Taking picture... (quality: %d)",quality);
+    sensor_t * s = esp_camera_sensor_get();
+    if(s==NULL)
+    {
+        return NULL;
     }
 
-    sensor_t *s = esp_camera_sensor_get();
-    s->set_vflip(s, 0); //flip it back
+    if(quality > 60)
+    {
+        quality = 60;
+    }
 
-    ESP_LOGI(TAG, "Tamaño del frame cambiado y cámara reinicializada");
-    return ESP_OK;
+    if(quality < 5)
+    {
+        quality = 5;
+    }
+
+    s->set_quality(s,quality);
+
+    fb = esp_camera_fb_get();
+    if(fb == NULL){
+        ESP_LOGE("ESPCAM","Camera capture failed");
+        return NULL;
+    }
+
+    esp_camera_fb_return(fb);
+
+    fb = esp_camera_fb_get();
+    if(fb == NULL){
+        ESP_LOGE("ESPCAM","Camera capture failed");
+        return NULL;
+    }
+
+    // uint8_t* image = nullptr;
+    uint8_t * image = (uint8_t *)malloc(fb->len);
+
+    // Convert the RAW image into JPG
+    // The parameter "31" is the JPG quality. Higher is better.
+    fmt2jpg(fb->buf, fb->len, fb->width, fb->height, fb->format, quality, &image, image_size);
+    // printf("Converted JPG size: %d -> %d bytes \n",fb->len, *image_size);
+
+    *image_size = fb->len;
+    
+    memcpy(image,fb->buf,fb->len);
+
+    esp_camera_fb_return(fb);
+
+    return image;
 }

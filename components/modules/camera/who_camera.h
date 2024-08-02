@@ -248,8 +248,7 @@ extern "C"
     enum __cam_state_t getCamState();
     void cam_setSleep(bool mode);
 
-    // Función para cambiar la resolución de la cámara
-    esp_err_t set_camera_framesize(framesize_t frame_size);
+    uint8_t* take_Photo(size_t* image_size, int quality);
 
 #ifdef __cplusplus
 }
