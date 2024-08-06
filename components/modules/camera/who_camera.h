@@ -243,6 +243,7 @@ extern "C"
     esp_err_t register_camera(const pixformat_t pixel_fromat,
                          const framesize_t frame_size,
                          const uint8_t fb_count,
+                         const camera_grab_mode_t grab_mode,
                          const QueueHandle_t frame_o);
 
     enum __cam_state_t getCamState();

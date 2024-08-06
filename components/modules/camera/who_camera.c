@@ -73,6 +73,7 @@ static void task_process_handler(void *arg)
 esp_err_t register_camera(const pixformat_t pixel_fromat,
                      const framesize_t frame_size,
                      const uint8_t fb_count,
+                     const camera_grab_mode_t grab_mode,
                      const QueueHandle_t frame_o)
 {
     ESP_LOGI(TAG, "Camera module is %s", CAMERA_MODULE_NAME);
@@ -117,7 +118,7 @@ esp_err_t register_camera(const pixformat_t pixel_fromat,
     config.jpeg_quality = 12;
     config.fb_count = fb_count;
     config.fb_location = CAMERA_FB_IN_PSRAM;
-    config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+    config.grab_mode = grab_mode;
 
     // camera init
     esp_err_t err = esp_camera_init(&config);
@@ -183,17 +184,15 @@ uint8_t* take_Photo(size_t* image_size, int quality)
         return NULL;
     }
 
-    // uint8_t* image = nullptr;
-    uint8_t * image = (uint8_t *)malloc(fb->len);
 
-    // Convert the RAW image into JPG
-    // The parameter "31" is the JPG quality. Higher is better.
-    fmt2jpg(fb->buf, fb->len, fb->width, fb->height, fb->format, quality, &image, image_size);
-    // printf("Converted JPG size: %d -> %d bytes \n",fb->len, *image_size);
-
+    // No es necesario convertir, ya está en JPEG
     *image_size = fb->len;
     
-    memcpy(image,fb->buf,fb->len);
+    uint8_t *image = (uint8_t *)malloc(fb->len);
+    if(image != NULL)
+    {
+        memcpy(image, fb->buf, fb->len);
+    }
 
     esp_camera_fb_return(fb);
 
