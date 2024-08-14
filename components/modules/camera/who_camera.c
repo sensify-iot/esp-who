@@ -44,7 +44,7 @@ static void task_process_handler(void *arg)
                 camera_fb_t *frame = esp_camera_fb_get();
                 if (frame)
                 {
-                    // printf("%d/%d -> Photo taken \t%db (fh: %d %d)\n",esp_log_timestamp(),pdMS_TO_TICKS(esp_log_timestamp()),frame->len,(uint32_t)heap_caps_get_free_size(MALLOC_CAP_8BIT),(uint32_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+                    // printf("%d\t::: Photo taken \t%db (fh: %d %d)\n",esp_log_timestamp(),frame->len,(uint32_t)heap_caps_get_free_size(MALLOC_CAP_8BIT),(uint32_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
                     // Verificar el tamaño del buffer antes de enviarlo a la cola
                     if (frame->len != (frame->width * frame->height * 2)) // Suponiendo RGB565
                     {
@@ -67,6 +67,7 @@ static void task_process_handler(void *arg)
                 break;
             }
         }
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 

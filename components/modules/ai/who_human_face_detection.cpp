@@ -47,6 +47,8 @@ static void task_process_handler(void *arg)
                 std::list<dl::detect::result_t> &detect_results = detector2.infer((uint16_t *)frame->buf, {(int)frame->height, (int)frame->width, 3}, detect_candidates);
 #else
                 std::list<dl::detect::result_t> &detect_results = detector.infer((uint16_t *)frame->buf, {(int)frame->height, (int)frame->width, 3});
+
+                // printf("%d\t::: detect_results FINISH\n",esp_log_timestamp());
 #endif
 
                 if (detect_results.size() > 0)
@@ -88,6 +90,7 @@ static void task_process_handler(void *arg)
             }
 
             is_processing = false; // Termina de procesar el frame
+            vTaskDelay(pdMS_TO_TICKS(100));
         }
     }
 }
@@ -113,8 +116,8 @@ void register_human_face_detection(const QueueHandle_t frame_i,
     gReturnFB = camera_fb_return;
 
     xTaskCreatePinnedToCore(task_process_handler, TAG, 4 * 1024, NULL, 5, NULL, 0);
-    if (xQueueEvent)
-        xTaskCreatePinnedToCore(task_event_handler, TAG, 4 * 1024, NULL, 5, NULL, 1);
+    // if (xQueueEvent)
+    //     xTaskCreatePinnedToCore(task_event_handler, TAG, 4 * 1024, NULL, 5, NULL, 1);
 }
 
 void set_faceD_callback(face_detected_cb cb)
