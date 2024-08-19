@@ -25,6 +25,8 @@ static bool gReturnFB = true;
 face_detected_cb _faceD_callback = nullptr;
 bool is_processing = false;
 
+bool _indic = false;
+
 static void task_process_handler(void *arg)
 {
     camera_fb_t *frame = NULL;
@@ -53,7 +55,8 @@ static void task_process_handler(void *arg)
 
                 if (detect_results.size() > 0)
                 {
-                    draw_detection_result((uint16_t *)frame->buf, frame->height, frame->width, detect_results);
+                    if(_indic) gpio_set_level((gpio_num_t)12,1);
+                    // draw_detection_result((uint16_t *)frame->buf, frame->height, frame->width, detect_results);
                     print_detection_result(detect_results);
                     is_detected = true;
 
@@ -68,6 +71,10 @@ static void task_process_handler(void *arg)
                     {
                         _faceD_callback(frame,score);
                     }
+                }
+                else
+                {
+                    if(_indic) gpio_set_level((gpio_num_t)12,0);
                 }
             }
 
@@ -107,13 +114,15 @@ void register_human_face_detection(const QueueHandle_t frame_i,
                                    const QueueHandle_t event,
                                    const QueueHandle_t result,
                                    const QueueHandle_t frame_o,
-                                   const bool camera_fb_return)
+                                   const bool camera_fb_return,
+                                   const bool indic)
 {
     xQueueFrameI = frame_i;
     xQueueFrameO = frame_o;
     xQueueEvent = event;
     xQueueResult = result;
     gReturnFB = camera_fb_return;
+    _indic = indic;
 
     xTaskCreatePinnedToCore(task_process_handler, TAG, 4 * 1024, NULL, 5, NULL, 0);
     // if (xQueueEvent)

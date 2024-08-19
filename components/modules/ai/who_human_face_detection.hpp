@@ -16,4 +16,5 @@ void register_human_face_detection(QueueHandle_t frame_i,
                                    QueueHandle_t event,
                                    QueueHandle_t result,
                                    QueueHandle_t frame_o = NULL,
-                                   const bool camera_fb_return = false);
+                                   const bool camera_fb_return = false,
+                                   const bool indic = false);
