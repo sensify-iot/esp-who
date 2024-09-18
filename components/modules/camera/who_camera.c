@@ -11,6 +11,13 @@ static QueueHandle_t xQueueFrameO = NULL;
 static enum __cam_state_t state = RUNNING;
 static bool _sleep = false;
 
+static int _brightness = 0;
+static int _saturation = 0;
+static bool _autoAEC = true;
+static int _exposure = 300;
+static bool _autoAGC = true;
+static int _gain = 0;
+
 enum __cam_state_t getCamState()
 {
     return state;
@@ -130,13 +137,29 @@ esp_err_t register_camera(const pixformat_t pixel_fromat,
     }
 
     sensor_t *s = esp_camera_sensor_get();
-    s->set_vflip(s, 1); //flip it back
+    // s->set_vflip(s, 1); //flip it back
     //initial sensors are flipped vertically and colors are a bit saturated
     if (s->id.PID == OV3660_PID)
     {
         s->set_brightness(s, 1);  //up the blightness just a bit
         s->set_saturation(s, -2); //lower the saturation
     }
+
+    s->set_contrast(s, 1);
+
+    // s->set_aec2(s, 1);
+    // s->set_lenc(s, 1);
+
+    // // Deshabilitar el control automático de exposición (AEC) y gain (AGC)
+    // s->set_gain_ctrl(s, 0);    // 0 = Deshabilitar AGC
+    // s->set_exposure_ctrl(s, 0); // 0 = Deshabilitar AEC
+
+    // // Establecer valores de exposición y gain
+    // s->set_aec_value(s, 100);   // Valor de exposición (0-1200), menor valor = menor tiempo de exposición
+    // s->set_agc_gain(s, 10);     // Valor de gain (0-30), mayor valor = mayor sensibilidad (simula ISO alto)
+
+    // s->set_brightness(s, 1);  //up the blightness just a bit
+    // s->set_saturation(s, 1); //lower the saturation
 
     if(frame_o)
     {
@@ -198,4 +221,39 @@ uint8_t* take_Photo(size_t* image_size, int quality)
     esp_camera_fb_return(fb);
 
     return image;
+}
+
+void setCamConfig(int newbrightness, int newsaturation, bool autoAEC, int newexposure, bool autoAGC, int newgain)
+{
+    _brightness = newbrightness;
+    _saturation = newsaturation;
+    _autoAEC = autoAEC;
+    _autoAGC = autoAGC;
+    _exposure = newexposure;
+    _gain = newgain;
+
+    sensor_t *s = esp_camera_sensor_get();
+
+    s->set_brightness(s, _brightness);  //up the blightness just a bit
+    s->set_saturation(s, _saturation); //lower the saturation
+
+    if(_autoAEC == true)
+    {
+        s->set_exposure_ctrl(s, 1); // 0 = Deshabilitar AEC
+    }
+    else
+    {
+        s->set_exposure_ctrl(s, 0); // 0 = Deshabilitar AEC
+        s->set_aec_value(s, _exposure);   // Valor de exposición (0-1200), menor valor = menor tiempo de exposición
+    }
+
+    if(_autoAGC == true)
+    {
+        s->set_gain_ctrl(s, 1); // 0 = Deshabilitar AEC
+    }
+    else
+    {
+        s->set_gain_ctrl(s, 0); // 0 = Deshabilitar AEC
+        s->set_agc_gain(s, _gain);   // Valor de exposición (0-1200), menor valor = menor tiempo de exposición
+    }
 }

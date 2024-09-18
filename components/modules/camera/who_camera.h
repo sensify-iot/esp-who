@@ -251,6 +251,8 @@ extern "C"
 
     uint8_t* take_Photo(size_t* image_size, int quality);
 
+    void setCamConfig(int newbrightness, int newsaturation, bool autoAEC, int newexposure, bool autoAGC, int newgain);
+
 #ifdef __cplusplus
 }
 #endif
